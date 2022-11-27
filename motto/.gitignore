@@ -1,0 +1,8 @@
+debug/
+target/
+Cargo.lock
+**/*.rs.bk
+*.pdb
+images/
+.DS_Store
+assets/backgrounds/
