@@ -14,8 +14,8 @@ FONTS = [
     "font6.otf",
     "font7.ttf"
 ]
-OUTPUT_PATH = "/Users/Devin/Desktop/background/images"
-FONT_PATH = "/Users/Devin/Desktop/background/fonts"
+OUTPUT_PATH = "/Users/Devin/Desktop/Github/DevinLeamy/Macground/images"
+FONT_PATH = "/Users/Devin/Desktop/Github/DevinLeamy/Macground/fonts"
 
 def get_wrapped_text(text: str, font: ImageFont.ImageFont, line_length: int):
     lines = ['']
