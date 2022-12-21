@@ -1,8 +1,8 @@
 use std::default::Default;
 
-use rand::{thread_rng, Rng, distributions::Uniform};
-use glyph_brush_layout::{*, ab_glyph::*};
-use image::{Rgba};
+use glyph_brush_layout::{ab_glyph::*, *};
+use image::Rgba;
+use rand::{distributions::Uniform, thread_rng, Rng};
 
 const WIDTH: u32 = 3840;
 const HEIGHT: u32 = 2160;
