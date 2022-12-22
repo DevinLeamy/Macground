@@ -11,44 +11,37 @@ mod text;
 use text::{draw_text, Bounds, TextConfig};
 
 mod background;
-use background::BackgroundConfig;
 
 use crate::text::font_path;
 
+const WW: u32 = 3840;
+const WH: u32 = 2160;
+
 fn main() {
     let message = "\"You, my friend, are a piece of shit\" - D.L.".to_string();
+    let mut background = BackgroundImage::new(WW, WH, &random_color());
 
-    let config = BackgroundConfig {
-        message,
-        color: random_color(),
-        font_path: font_path("font1.otf"),
-        ..Default::default()
-    };
-    let image_path = create_new_background(config);
-    println!("Created new image");
-
-    display_image_as_background(image_path);
-}
-
-/// Creates a new background image and returns a path to the
-/// created image.
-fn create_new_background(config: BackgroundConfig) -> PathBuf {
-    let mut background = BackgroundImage::new(config.width, config.height, &config.color);
-
-    // (*crate::text::FONT_LOADER).load_font(config.font_path.as_path());
     let text_config = TextConfig {
-        text: config.message,
+        text: message,
         text_scale: 100.0,
-        font_path: config.font_path,
+        font_path: font_path("font1.otf"),
         context_bounds: Bounds {
-            width: config.width as f32,
-            height: config.height as f32,
+            width: WW as f32,
+            height: WH as f32,
         },
         ..Default::default()
     };
 
     draw_text(&mut background, text_config);
-    save_image(background)
+    let output_path = PathBuf::from(&format!(
+        "{}/assets/backgrounds/{}",
+        env!("CARGO_MANIFEST_DIR"),
+        generate_file_name()
+    ));
+    BackgroundImage::save(background, &output_path).expect("Failed to save background image.");
+    println!("Created new image");
+
+    display_image_as_background(output_path);
 }
 
 fn generate_file_name() -> String {
@@ -56,18 +49,6 @@ fn generate_file_name() -> String {
     let id = rng.sample(Uniform::new(1000, 9999));
 
     format!("background_{id}.png")
-}
-
-fn save_image(image: BackgroundImage) -> PathBuf {
-    let output_path = PathBuf::from(&format!(
-        "{}/assets/backgrounds/{}",
-        env!("CARGO_MANIFEST_DIR"),
-        generate_file_name()
-    ));
-
-    BackgroundImage::save(image, &output_path).expect("Failed to save background image.");
-
-    output_path
 }
 
 /**
