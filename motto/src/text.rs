@@ -95,12 +95,11 @@ pub fn generate_glyphs(config: TextConfig) -> Vec<SectionGlyph> {
         &SectionGeometry {
             screen_position: (
                 config.context_bounds.width / 2.0,
-                config.context_bounds.height / 3.0,
+                config.context_bounds.height / 2.0,
             ),
             ..Default::default()
         },
         &[SectionText {
-            // TODO: make this configurable
             font_id: FontId(0),
             text: config.text.as_str(),
             scale: PxScale::from(100.0), // Pixel-height of the text
@@ -111,96 +110,34 @@ pub fn generate_glyphs(config: TextConfig) -> Vec<SectionGlyph> {
     glyphs
 }
 
-/// A glyph positioned on a screen.
-pub struct PositionedGlyph(
-    /// Outlined glyph to be drawn.
-    OutlinedGlyph,
-    /// Screen position where the glyph is to be drawn.
-    Point,
-);
-
 pub fn draw_text<'a>(image: &mut ImageBuffer<Rgba<u8>, Vec<u8>>, text_config: TextConfig) {
     let glyphs = generate_glyphs(text_config.clone());
     let font = (*FONT_LOADER).font(text_config.font_path.as_path());
 
-    let mut text_glyphs: Vec<PositionedGlyph> = vec![];
-
-    // Collect all the positioned glyphs inside of the text
     for section_glyph in glyphs {
-        let position = section_glyph.glyph.position;
-        let glyph = font.outline_glyph(section_glyph.glyph).unwrap();
+        let raw_glyph = section_glyph.glyph;
+        if let Some(glyph) = font.outline_glyph(raw_glyph.clone()) {
+            let bounds = glyph.px_bounds();
 
-        text_glyphs.push(PositionedGlyph(glyph, position));
-    }
+            glyph.draw(|x, y, coverage| {
+                let alpha = (255.0 * coverage) as u8;
+                let x_corrected = (bounds.min.x + x as f32) as u32;
+                let y_corrected = (bounds.min.y + y as f32) as u32;
 
-    let mut global_max_y = 0u32;
-    /*
-    We first determine the highest "y" point in all of the text. Then, for each
-    glyph that we draw, we determine it's highest "y" point. We then take the difference
-    of the global max y and the local max y. Since y values grow downwards, this tells us the
-    how much we need to offset the y value of each pixel in the glyph we are drawning such that
-    all characters end up with the same highest y value. Aesthetically, this means that all
-    characters will share a common baseline (like a line on a piece of paper).
-     */
-    for PositionedGlyph(glyph, _position) in text_glyphs.iter() {
-        let bounds = glyph.px_bounds();
-        global_max_y = u32::max(global_max_y, bounds.max.y as u32);
-    }
+                let text_color = &[255u8, 255u8, 255u8, alpha];
+                let text_pixel = Pixel::from_slice(text_color);
 
-    for PositionedGlyph(glyph, position) in text_glyphs.iter() {
-        let bounds = glyph.px_bounds();
-        println!("Bounds: {:?}", bounds);
-        let glyph_max_y = bounds.max.y as u32;
-
-        let offset = 0; // global_max_y - glyph_max_y;
-
-        println!("Offset: {offset}");
-
-        let mut max_pos = 0.0;
-
-        glyph.draw(|x, y, coverage| {
-            let alpha = (255.0 * coverage) as u8;
-            let x_corrected = (bounds.min.x + x as f32) as u32;
-            let y_corrected = (bounds.min.y + (y + offset) as f32) as u32;
-
-            let text_color = &[255u8, 255u8, 255u8, alpha];
-            let text_pixel = Pixel::from_slice(text_color);
-
-            max_pos = f32::max(max_pos, y as f32);
-
-            image
-                .get_pixel_mut(x_corrected, y_corrected)
-                .blend(text_pixel);
-        });
-
-        println!("max: {max_pos}");
+                image
+                    .get_pixel_mut(x_corrected, y_corrected)
+                    .blend(text_pixel);
+            });
+        } else {
+            println!("Could not outline glyph {:?}", raw_glyph);
+        }
     }
 }
 
 pub fn font_path(name: &str) -> PathBuf {
     let path = format!("{}/assets/fonts/{name}", env!("CARGO_MANIFEST_DIR"));
     PathBuf::from(path)
-}
-
-fn draw_glyphs(image: &mut ImageBuffer<Rgba<u8>, Vec<u8>>, text: &str) {
-    // Create the positioned glyphs
-    // Draw the glyphs on the screen
-    let layout = Layout::default_single_line();
-    let glyphs = layout.calculate_glyphs(
-        &[(*FONT_LOADER).font(font_path("font1.otf").as_path())],
-        &SectionGeometry {
-            screen_position: (0.0, 0.0),
-            ..Default::default()
-        },
-        &[SectionText {
-            // TODO: make this configurable
-            font_id: FontId(0),
-            text,
-            scale: PxScale::from(400.0), // Pixel-height of the text
-            ..Default::default()
-        }],
-    );
-    // for glyph in glyphs {
-    //     glyph.
-    // }
 }

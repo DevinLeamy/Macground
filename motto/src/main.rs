@@ -16,7 +16,7 @@ use background::BackgroundConfig;
 use crate::text::font_path;
 
 fn main() {
-    let message = "\".-_Youmyfr".to_string();
+    let message = "\"You, my friend, are a piece of shit\" - D.L.".to_string();
 
     let config = BackgroundConfig {
         message,
