@@ -1,14 +1,16 @@
 #[allow(unused_variables)]
+use lazy_static::lazy_static;
+use std::path::PathBuf;
 /**
  * This module is responsible for formatting and position text
  * within the bounds of the screen
  */
-use std::default::Default;
+use std::{collections::HashMap, default::Default, path::Path};
 
 use glyph_brush_layout::{ab_glyph::*, *};
 use image::{ImageBuffer, Pixel, Rgba};
 
-/**
+/*
  * TODO:
  * - Allow loading fonts at runtime
  * - Store fonts in a better way
@@ -20,37 +22,36 @@ use image::{ImageBuffer, Pixel, Rgba};
  *
  */
 
+lazy_static! {
+    pub static ref FONT_LOADER: FontLoader<'static> = FontLoader::new();
+}
+
 pub struct FontLoader<'a> {
-    fonts: Vec<FontRef<'a>>,
+    /// Raw bytes of loaded fonts
+    fonts_raw: Vec<Vec<u8>>,
+    /// Mapping of font paths to font refs
+    fonts: HashMap<String, FontRef<'a>>,
 }
 impl<'a> FontLoader<'a> {
-    // TODO: make private
-    pub const FONTS: [&[u8]; 7] = [
-        include_bytes!("../assets/fonts/font1.otf"),
-        include_bytes!("../assets/fonts/font3.ttf"),
-        include_bytes!("../assets/fonts/font3.ttf"),
-        include_bytes!("../assets/fonts/font4.ttf"),
-        include_bytes!("../assets/fonts/font5.otf"),
-        include_bytes!("../assets/fonts/font6.otf"),
-        include_bytes!("../assets/fonts/font7.ttf"),
-    ];
+    pub fn new() -> FontLoader<'a> {
+        let mut loader = Self {
+            fonts_raw: vec![],
+            fonts: HashMap::new(),
+        };
 
-    fn init() -> FontLoader<'a> {
-        FontLoader {
-            fonts: vec![
-                FontRef::try_from_slice(FontLoader::FONTS[0]).unwrap(),
-                FontRef::try_from_slice(FontLoader::FONTS[1]).unwrap(),
-                FontRef::try_from_slice(FontLoader::FONTS[2]).unwrap(),
-                FontRef::try_from_slice(FontLoader::FONTS[3]).unwrap(),
-                FontRef::try_from_slice(FontLoader::FONTS[4]).unwrap(),
-                FontRef::try_from_slice(FontLoader::FONTS[5]).unwrap(),
-                FontRef::try_from_slice(FontLoader::FONTS[6]).unwrap(),
-            ],
-        }
+        loader.load_font(font_path("font1.otf").as_path());
+
+        loader
     }
 
-    fn fonts(&self) -> &[FontRef<'a>] {
-        self.fonts.as_slice()
+    pub fn load_font(&mut self, path: &Path) -> () {
+        println!("{:?}", path);
+        let bytes = std::fs::read(path).unwrap();
+        self.fonts_raw.push(bytes);
+    }
+
+    pub fn font(&'a self, path: &Path) -> FontRef<'a> {
+        FontRef::try_from_slice(&self.fonts_raw[0]).unwrap()
     }
 }
 
@@ -65,7 +66,7 @@ pub struct Bounds {
 
 #[derive(Clone)]
 pub struct TextConfig {
-    pub font: String,
+    pub font_path: PathBuf,
     pub text: String,
     pub text_scale: f32,
     pub context_bounds: Bounds,
@@ -74,7 +75,7 @@ pub struct TextConfig {
 impl Default for TextConfig {
     fn default() -> TextConfig {
         TextConfig {
-            font: "font4.otf".to_string(),
+            font_path: font_path("font1.otf"),
             text: "Motto".to_string(),
             text_scale: 40.0,
             context_bounds: Bounds::default(),
@@ -83,7 +84,6 @@ impl Default for TextConfig {
 }
 
 pub fn generate_glyphs(config: TextConfig) -> Vec<SectionGlyph> {
-    let font_loader = FontLoader::init();
     let layout = Layout::SingleLine {
         h_align: HorizontalAlign::Center,
         v_align: VerticalAlign::Center,
@@ -91,20 +91,19 @@ pub fn generate_glyphs(config: TextConfig) -> Vec<SectionGlyph> {
     };
 
     let glyphs: Vec<SectionGlyph> = layout.calculate_glyphs(
-        font_loader.fonts(),
+        &[(*FONT_LOADER).font(config.font_path.as_path())],
         &SectionGeometry {
-            // TODO: set to text position
             screen_position: (
                 config.context_bounds.width / 2.0,
                 config.context_bounds.height / 3.0,
             ),
-            bounds: (config.context_bounds.width, config.context_bounds.height),
+            ..Default::default()
         },
         &[SectionText {
             // TODO: make this configurable
-            font_id: FontId(1),
+            font_id: FontId(0),
             text: config.text.as_str(),
-            scale: PxScale::from(400.0), // Pixel-height of the text
+            scale: PxScale::from(100.0), // Pixel-height of the text
             ..Default::default()
         }],
     );
@@ -122,9 +121,7 @@ pub struct PositionedGlyph(
 
 pub fn draw_text<'a>(image: &mut ImageBuffer<Rgba<u8>, Vec<u8>>, text_config: TextConfig) {
     let glyphs = generate_glyphs(text_config.clone());
-    let font_loader = FontLoader::init();
-    let fonts = font_loader.fonts();
-    let font = fonts[1].clone();
+    let font = (*FONT_LOADER).font(text_config.font_path.as_path());
 
     let mut text_glyphs: Vec<PositionedGlyph> = vec![];
 
@@ -146,32 +143,64 @@ pub fn draw_text<'a>(image: &mut ImageBuffer<Rgba<u8>, Vec<u8>>, text_config: Te
     characters will share a common baseline (like a line on a piece of paper).
      */
     for PositionedGlyph(glyph, _position) in text_glyphs.iter() {
-        glyph.draw(|_x, y, _coverage| {
-            global_max_y = u32::max(global_max_y, y);
-        });
+        let bounds = glyph.px_bounds();
+        global_max_y = u32::max(global_max_y, bounds.max.y as u32);
     }
 
     for PositionedGlyph(glyph, position) in text_glyphs.iter() {
-        let mut glyph_max_y = 0u32;
-        let mut glyph_max_x = 0u32;
-        glyph.draw(|x, y, _coverage| {
-            glyph_max_y = u32::max(glyph_max_y, y);
-            glyph_max_x = u32::max(glyph_max_x, x);
-        });
+        let bounds = glyph.px_bounds();
+        println!("Bounds: {:?}", bounds);
+        let glyph_max_y = bounds.max.y as u32;
 
-        let offset = global_max_y - glyph_max_y;
+        let offset = 0; // global_max_y - glyph_max_y;
+
+        println!("Offset: {offset}");
+
+        let mut max_pos = 0.0;
 
         glyph.draw(|x, y, coverage| {
             let alpha = (255.0 * coverage) as u8;
-            let x_corrected = (position.x + x as f32) as u32;
-            let y_corrected = (position.y + (y + offset) as f32) as u32;
+            let x_corrected = (bounds.min.x + x as f32) as u32;
+            let y_corrected = (bounds.min.y + (y + offset) as f32) as u32;
 
             let text_color = &[255u8, 255u8, 255u8, alpha];
             let text_pixel = Pixel::from_slice(text_color);
+
+            max_pos = f32::max(max_pos, y as f32);
 
             image
                 .get_pixel_mut(x_corrected, y_corrected)
                 .blend(text_pixel);
         });
+
+        println!("max: {max_pos}");
     }
+}
+
+pub fn font_path(name: &str) -> PathBuf {
+    let path = format!("{}/assets/fonts/{name}", env!("CARGO_MANIFEST_DIR"));
+    PathBuf::from(path)
+}
+
+fn draw_glyphs(image: &mut ImageBuffer<Rgba<u8>, Vec<u8>>, text: &str) {
+    // Create the positioned glyphs
+    // Draw the glyphs on the screen
+    let layout = Layout::default_single_line();
+    let glyphs = layout.calculate_glyphs(
+        &[(*FONT_LOADER).font(font_path("font1.otf").as_path())],
+        &SectionGeometry {
+            screen_position: (0.0, 0.0),
+            ..Default::default()
+        },
+        &[SectionText {
+            // TODO: make this configurable
+            font_id: FontId(0),
+            text,
+            scale: PxScale::from(400.0), // Pixel-height of the text
+            ..Default::default()
+        }],
+    );
+    // for glyph in glyphs {
+    //     glyph.
+    // }
 }

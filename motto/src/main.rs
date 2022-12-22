@@ -3,24 +3,25 @@ use std::default::Default;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 // third party
-use glyph_brush_layout::{ab_glyph::*, *};
 use image::{ImageBuffer, Rgba};
-use imageproc::drawing::text_size;
 use rand::distributions::Uniform;
 use rand::{thread_rng, Rng};
-use rusttype::{Font, Scale};
 
 mod text;
-use text::{draw_text, generate_glyphs, Bounds, TextConfig};
+use text::{draw_text, Bounds, TextConfig};
 
 mod background;
 use background::BackgroundConfig;
 
+use crate::text::font_path;
+
 fn main() {
-    let message = "-TextBreak-".to_string();
+    let message = "\".-_Youmyfr".to_string();
 
     let config = BackgroundConfig {
         message,
+        color: random_color(),
+        font_path: font_path("font1.otf"),
         ..Default::default()
     };
     let image_path = create_new_background(config);
@@ -29,13 +30,17 @@ fn main() {
     display_image_as_background(image_path);
 }
 
+/// Creates a new background image and returns a path to the
+/// created image.
 fn create_new_background(config: BackgroundConfig) -> PathBuf {
     let mut image: ImageBuffer<Rgba<u8>, Vec<u8>> =
         ImageBuffer::from_pixel(config.width, config.height, config.color);
 
+    // (*crate::text::FONT_LOADER).load_font(config.font_path.as_path());
     let text_config = TextConfig {
         text: config.message,
         text_scale: 100.0,
+        font_path: config.font_path,
         context_bounds: Bounds {
             width: config.width as f32,
             height: config.height as f32,
@@ -45,11 +50,6 @@ fn create_new_background(config: BackgroundConfig) -> PathBuf {
 
     draw_text(&mut image, text_config);
     save_image(image)
-}
-
-fn load_font(_font: &'static str) -> Font<'static> {
-    let font_data = text::FontLoader::FONTS[0];
-    Font::try_from_bytes(font_data).unwrap()
 }
 
 fn generate_file_name() -> String {
@@ -92,6 +92,13 @@ fn display_image_as_background(image_path: PathBuf) -> () {
         ])
         .spawn()
         .expect("failed to set background image");
+}
 
-    println!("Updated background image");
+pub fn random_color() -> Rgba<u8> {
+    let mut rng = thread_rng();
+    let r = rng.sample(Uniform::new(0, 255));
+    let g = rng.sample(Uniform::new(0, 255));
+    let b = rng.sample(Uniform::new(0, 255));
+
+    [r, g, b, 255].into()
 }
