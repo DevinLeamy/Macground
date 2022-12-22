@@ -1,7 +1,7 @@
 // std
 use std::default::Default;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 // third party
 use image::{ImageBuffer, ImageResult, Pixel, Rgba};
 use rand::distributions::Uniform;
@@ -10,24 +10,35 @@ use rand::{thread_rng, Rng};
 mod text;
 use text::{draw_text, Bounds, TextConfig};
 
-mod background;
-
 use crate::text::font_path;
 
 const WW: u32 = 3840;
 const WH: u32 = 2160;
+/*
+Configurable things / CLI args:
+- Font path
+- Text
+- Background color
+- Text color
+*/
 
 fn main() {
     let message = "\"You, my friend, are a piece of shit\" - D.L.".to_string();
-    let mut background = BackgroundImage::new(WW, WH, &random_color());
+    let (width, height) = match get_display_resolution() {
+        Some(dimensions) => dimensions,
+        None => (WW, WH),
+    };
+
+    let mut background = BackgroundImage::new(width, height, &random_color());
+    get_display_resolution();
 
     let text_config = TextConfig {
         text: message,
         text_scale: 100.0,
         font_path: font_path("font1.otf"),
         context_bounds: Bounds {
-            width: WW as f32,
-            height: WH as f32,
+            width: width as f32,
+            height: height as f32,
         },
         ..Default::default()
     };
@@ -70,6 +81,40 @@ fn display_image_as_background(image_path: PathBuf) -> () {
         ])
         .spawn()
         .expect("failed to set background image");
+}
+
+/// Computes the dimensions of your display. If there are multiple displays, it
+/// computes the dimensions of the first one it finds.
+fn get_display_resolution() -> Option<(u32, u32)> {
+    let process_one = Command::new("system_profiler")
+        .arg("SPDisplaysDataType")
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let output = Command::new("awk")
+        .arg("/Resolution/{print $2, $3, $4}")
+        .stdin(Stdio::from(process_one.stdout.unwrap()))
+        .output()
+        .unwrap();
+
+    let result = std::str::from_utf8(&output.stdout).unwrap();
+    // Some: "[width0, x, height0, x, width1, x, height1]"
+    let split = result.split_whitespace();
+
+    let mut dimensions: Vec<u32> = vec![];
+    for str in split {
+        if str == "x" {
+            continue;
+        }
+        println!("STR: {str}");
+        dimensions.push(str.parse::<u32>().unwrap());
+    }
+
+    if dimensions.is_empty() {
+        None
+    } else {
+        Some((dimensions[0], dimensions[1]))
+    }
 }
 
 pub fn random_color() -> Rgba<u8> {
