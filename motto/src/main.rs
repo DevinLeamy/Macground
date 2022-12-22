@@ -1,6 +1,6 @@
 // std
 use std::default::Default;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 // third party
 use image::{ImageBuffer, ImageResult, Pixel, Rgba};

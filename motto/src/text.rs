@@ -1,28 +1,13 @@
 #[allow(unused_variables)]
 use lazy_static::lazy_static;
 use std::path::PathBuf;
-/**
- * This module is responsible for formatting and position text
- * within the bounds of the screen
- */
+
 use std::{collections::HashMap, default::Default, path::Path};
 
 use glyph_brush_layout::{ab_glyph::*, *};
-use image::{ImageBuffer, Pixel, Rgba};
+use image::Pixel;
 
 use crate::BackgroundImage;
-
-/*
- * TODO:
- * - Allow loading fonts at runtime
- * - Store fonts in a better way
- *  - Avoid conflicts between `FontRef` and `FontId`
- * - Allow text to be left/right/center aligned
- *  - Include in text config
- * - Allow configuration of font size
- * - Create default for TextConfig
- *
- */
 
 lazy_static! {
     pub static ref FONT_LOADER: FontLoader<'static> = FontLoader::new();
@@ -52,7 +37,7 @@ impl<'a> FontLoader<'a> {
         self.fonts_raw.push(bytes);
     }
 
-    pub fn font(&'a self, path: &Path) -> FontRef<'a> {
+    pub fn font(&'a self, _path: &Path) -> FontRef<'a> {
         FontRef::try_from_slice(&self.fonts_raw[0]).unwrap()
     }
 }
