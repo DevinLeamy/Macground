@@ -3,7 +3,7 @@ use std::default::Default;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 // third party
-use image::{ImageBuffer, Rgba};
+use image::{ImageBuffer, ImageResult, Pixel, Rgba};
 use rand::distributions::Uniform;
 use rand::{thread_rng, Rng};
 
@@ -33,8 +33,7 @@ fn main() {
 /// Creates a new background image and returns a path to the
 /// created image.
 fn create_new_background(config: BackgroundConfig) -> PathBuf {
-    let mut image: ImageBuffer<Rgba<u8>, Vec<u8>> =
-        ImageBuffer::from_pixel(config.width, config.height, config.color);
+    let mut background = BackgroundImage::new(config.width, config.height, &config.color);
 
     // (*crate::text::FONT_LOADER).load_font(config.font_path.as_path());
     let text_config = TextConfig {
@@ -48,8 +47,8 @@ fn create_new_background(config: BackgroundConfig) -> PathBuf {
         ..Default::default()
     };
 
-    draw_text(&mut image, text_config);
-    save_image(image)
+    draw_text(&mut background, text_config);
+    save_image(background)
 }
 
 fn generate_file_name() -> String {
@@ -59,16 +58,14 @@ fn generate_file_name() -> String {
     format!("background_{id}.png")
 }
 
-fn save_image(image: ImageBuffer<Rgba<u8>, Vec<u8>>) -> PathBuf {
+fn save_image(image: BackgroundImage) -> PathBuf {
     let output_path = PathBuf::from(&format!(
         "{}/assets/backgrounds/{}",
         env!("CARGO_MANIFEST_DIR"),
         generate_file_name()
     ));
 
-    image
-        .save(&output_path)
-        .expect("Error: failed to save image");
+    BackgroundImage::save(image, &output_path).expect("Failed to save background image.");
 
     output_path
 }
@@ -102,3 +99,33 @@ pub fn random_color() -> Rgba<u8> {
 
     [r, g, b, 255].into()
 }
+
+#[derive(Debug)]
+pub struct BackgroundImage {
+    width: u32,
+    height: u32,
+    buffer: ImageBuffer<Rgba<u8>, Vec<u8>>,
+}
+
+impl BackgroundImage {
+    pub fn new(width: u32, height: u32, background_color: &Rgba<u8>) -> Self {
+        Self {
+            buffer: ImageBuffer::from_pixel(width, height, *background_color),
+            width,
+            height,
+        }
+    }
+
+    /// Sets the color of a given pixel
+    pub fn set_pixel(&mut self, x: u32, y: u32, color: &Rgba<u8>) {
+        self.buffer.get_pixel_mut(x, y).blend(&color);
+    }
+
+    pub fn save(image: BackgroundImage, path: &PathBuf) -> ImageResult<()> {
+        image.buffer.save(path)
+    }
+}
+
+struct TextBox {}
+
+// pub fn

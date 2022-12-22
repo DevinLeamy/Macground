@@ -10,6 +10,8 @@ use std::{collections::HashMap, default::Default, path::Path};
 use glyph_brush_layout::{ab_glyph::*, *};
 use image::{ImageBuffer, Pixel, Rgba};
 
+use crate::BackgroundImage;
+
 /*
  * TODO:
  * - Allow loading fonts at runtime
@@ -66,9 +68,13 @@ pub struct Bounds {
 
 #[derive(Clone)]
 pub struct TextConfig {
+    /// Path to the font used to display the text
     pub font_path: PathBuf,
+    /// Text to display
     pub text: String,
+    /// Scale of text in pixels
     pub text_scale: f32,
+    /// Bounds of the window on which the text is drawn
     pub context_bounds: Bounds,
 }
 
@@ -102,7 +108,7 @@ pub fn generate_glyphs(config: TextConfig) -> Vec<SectionGlyph> {
         &[SectionText {
             font_id: FontId(0),
             text: config.text.as_str(),
-            scale: PxScale::from(100.0), // Pixel-height of the text
+            scale: PxScale::from(config.text_scale), // Pixel-height of the text
             ..Default::default()
         }],
     );
@@ -110,7 +116,7 @@ pub fn generate_glyphs(config: TextConfig) -> Vec<SectionGlyph> {
     glyphs
 }
 
-pub fn draw_text<'a>(image: &mut ImageBuffer<Rgba<u8>, Vec<u8>>, text_config: TextConfig) {
+pub fn draw_text<'a>(image: &mut BackgroundImage, text_config: TextConfig) {
     let glyphs = generate_glyphs(text_config.clone());
     let font = (*FONT_LOADER).font(text_config.font_path.as_path());
 
@@ -127,9 +133,7 @@ pub fn draw_text<'a>(image: &mut ImageBuffer<Rgba<u8>, Vec<u8>>, text_config: Te
                 let text_color = &[255u8, 255u8, 255u8, alpha];
                 let text_pixel = Pixel::from_slice(text_color);
 
-                image
-                    .get_pixel_mut(x_corrected, y_corrected)
-                    .blend(text_pixel);
+                image.set_pixel(x_corrected, y_corrected, text_pixel);
             });
         } else {
             println!("Could not outline glyph {:?}", raw_glyph);
