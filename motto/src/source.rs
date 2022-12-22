@@ -64,7 +64,7 @@ impl Source for ImageSource {
     fn get_background(&self) -> BackgroundImage {
         let response = reqwest::blocking::get(&self.image_url).unwrap();
         let image = image::load_from_memory(&response.bytes().unwrap()).unwrap();
-        let image = image.resize(
+        let image = image.resize_to_fill(
             self.width,
             self.height,
             image::imageops::FilterType::Nearest,

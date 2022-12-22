@@ -31,6 +31,7 @@ Configurable things / CLI args:
 fn main() {
     let pretty_images: Vec<&str> = vec![
         "https://images.pexels.com/photos/589840/pexels-photo-589840.jpeg?cs=srgb&dl=pexels-valiphotos-589840.jpg&fm=jpg",
+        "https://hips.hearstapps.com/hmg-prod.s3.amazonaws.com/images/cute-cat-photos-1593441022.jpg?crop=0.670xw:1.00xh;0.167xw,0&resize=640:*"
     ];
     // let image_urls = get_random_image_urls();
     let (width, height) = match get_display_resolution() {
