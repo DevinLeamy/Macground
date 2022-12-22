@@ -32,7 +32,6 @@ impl<'a> FontLoader<'a> {
     }
 
     pub fn load_font(&mut self, path: &Path) -> () {
-        println!("{:?}", path);
         let bytes = std::fs::read(path).unwrap();
         self.fonts_raw.push(bytes);
     }
@@ -121,7 +120,7 @@ pub fn draw_text<'a>(image: &mut BackgroundImage, text_config: TextConfig) {
                 image.set_pixel(x_corrected, y_corrected, text_pixel);
             });
         } else {
-            println!("Could not outline glyph {:?}", raw_glyph);
+            // println!("Could not outline glyph {:?}", raw_glyph);
         }
     }
 }

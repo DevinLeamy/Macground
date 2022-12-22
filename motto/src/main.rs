@@ -1,15 +1,21 @@
+use std::collections::HashMap;
 // std
 use std::default::Default;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 // third party
 use image::{ImageBuffer, ImageResult, Pixel, Rgba};
+mod text;
+use dotenv::dotenv;
 use rand::distributions::Uniform;
 use rand::{thread_rng, Rng};
-
-mod text;
+use serde::Deserialize;
+use source::ImageSource;
 use text::{draw_text, Bounds, TextConfig};
 
+mod source;
+
+use crate::source::{ColorSource, Source};
 use crate::text::font_path;
 
 const WW: u32 = 3840;
@@ -23,22 +29,29 @@ Configurable things / CLI args:
 */
 
 fn main() {
-    let message = "\"You, my friend, are a piece of shit\" - D.L.".to_string();
+    let pretty_images: Vec<&str> = vec![
+        "https://images.pexels.com/photos/589840/pexels-photo-589840.jpeg?cs=srgb&dl=pexels-valiphotos-589840.jpg&fm=jpg",
+    ];
+    // let image_urls = get_random_image_urls();
     let (width, height) = match get_display_resolution() {
         Some(dimensions) => dimensions,
         None => (WW, WH),
     };
 
-    let mut background = BackgroundImage::new(width, height, &random_color());
-    get_display_resolution();
+    // let image_source = ImageSource::new(width, height, image_urls[0].clone());
+    let image_source = ImageSource::new(width, height, pretty_images[0].to_string());
+    let color_source = ColorSource::random(width, height);
+    let message = "\"You, my friend, are a piece of shit\" - D.L.".to_string();
+    let mut background = image_source.get_background();
+    // let mut background = color_source.get_background();
 
     let text_config = TextConfig {
         text: message,
         text_scale: 100.0,
         font_path: font_path("font1.otf"),
         context_bounds: Bounds {
-            width: width as f32,
-            height: height as f32,
+            width: background.width() as f32,
+            height: background.height() as f32,
         },
         ..Default::default()
     };
@@ -50,7 +63,6 @@ fn main() {
         generate_file_name()
     ));
     BackgroundImage::save(background, &output_path).expect("Failed to save background image.");
-    println!("Created new image");
 
     display_image_as_background(output_path);
 }
@@ -106,7 +118,6 @@ fn get_display_resolution() -> Option<(u32, u32)> {
         if str == "x" {
             continue;
         }
-        println!("STR: {str}");
         dimensions.push(str.parse::<u32>().unwrap());
     }
 
@@ -115,15 +126,6 @@ fn get_display_resolution() -> Option<(u32, u32)> {
     } else {
         Some((dimensions[0], dimensions[1]))
     }
-}
-
-pub fn random_color() -> Rgba<u8> {
-    let mut rng = thread_rng();
-    let r = rng.sample(Uniform::new(0, 255));
-    let g = rng.sample(Uniform::new(0, 255));
-    let b = rng.sample(Uniform::new(0, 255));
-
-    [r, g, b, 255].into()
 }
 
 #[derive(Debug)]
@@ -142,8 +144,28 @@ impl BackgroundImage {
         }
     }
 
+    pub fn from(buffer: ImageBuffer<Rgba<u8>, Vec<u8>>) -> Self {
+        Self {
+            width: buffer.width(),
+            height: buffer.height(),
+            buffer,
+        }
+    }
+
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+
+    pub fn height(&self) -> u32 {
+        self.height
+    }
+
     /// Sets the color of a given pixel
     pub fn set_pixel(&mut self, x: u32, y: u32, color: &Rgba<u8>) {
+        if x >= self.width() || y >= self.height() {
+            println!("Out of bounds ({x}, {y})");
+            return;
+        }
         self.buffer.get_pixel_mut(x, y).blend(&color);
     }
 
@@ -152,6 +174,21 @@ impl BackgroundImage {
     }
 }
 
-struct TextBox {}
+#[derive(Deserialize)]
+struct UnsplashResponse {
+    urls: HashMap<String, String>,
+}
 
-// pub fn
+fn get_random_image_urls() -> Vec<String> {
+    // Loads the environment variables from .env
+    dotenv().ok();
+
+    let api_key = std::env::var("UNSPLASH_API_KEY").unwrap();
+    let endpoint = format!("https://api.unsplash.com/photos/random?client_id={api_key}");
+    let response = reqwest::blocking::get(&endpoint)
+        .unwrap()
+        .json::<UnsplashResponse>()
+        .unwrap();
+
+    vec![response.urls.get(&"full".to_string()).unwrap().to_owned()]
+}

@@ -8,4 +8,7 @@ image = "0.24.4"
 rand = "0.8.5"
 glyph_brush_layout = "0.2.3"
 lazy_static = "1.4.0"
+reqwest = { version = "0.10", features = ["blocking", "json"] } 
+dotenv = "0.15.0"
+serde = { version = "1.0", features = ["derive"] }
     

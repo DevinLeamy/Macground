@@ -6,3 +6,4 @@ Cargo.lock
 images/
 .DS_Store
 assets/backgrounds/
+.env
