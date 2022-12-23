@@ -10,7 +10,7 @@ use dotenv::dotenv;
 use rand::distributions::Uniform;
 use rand::{thread_rng, Rng};
 use serde::Deserialize;
-use source::ImageSource;
+use source::{ImageSource, QuoteSource, RandomWordSource, TextSource};
 use text::{draw_text, Bounds, TextConfig};
 
 mod source;
@@ -39,15 +39,21 @@ fn main() {
         None => (WW, WH),
     };
 
+    // Text sources
+    let random_word_source = RandomWordSource::default();
+    let random_quote_source = QuoteSource::default();
+    let random_word = random_word_source.source_text()[0].to_owned();
+    let random_quote = random_quote_source.source_text();
+
+    // Image sources
     // let image_source = ImageSource::new(width, height, image_urls[0].clone());
     let image_source = ImageSource::new(width, height, pretty_images[0].to_string());
     let color_source = ColorSource::random(width, height);
-    let message = "\"You, my friend, are a piece of shit\" - D.L.".to_string();
     let mut background = image_source.get_background();
     // let mut background = color_source.get_background();
 
     let text_config = TextConfig {
-        text: message,
+        text: random_quote[0].to_owned(),
         text_scale: 100.0,
         font_path: font_path("font1.otf"),
         context_bounds: Bounds {

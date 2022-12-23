@@ -1,7 +1,10 @@
+use std::collections::HashMap;
+
 use image::Rgba;
 use rand::distributions::Uniform;
 use rand::{thread_rng, Rng};
 use reqwest;
+use serde::Deserialize;
 
 use crate::BackgroundImage;
 
@@ -72,5 +75,57 @@ impl Source for ImageSource {
         let buffer = image.into_rgba8();
 
         BackgroundImage::from(buffer)
+    }
+}
+
+pub trait TextSource {
+    fn source_text(&self) -> Vec<String>;
+}
+
+#[derive(Deserialize)]
+struct RandomWordResponse {
+    word: String,
+}
+
+/// [TextSource] for generating a random word.
+#[derive(Default)]
+pub struct RandomWordSource;
+
+impl TextSource for RandomWordSource {
+    fn source_text(&self) -> Vec<String> {
+        let url = "https://random-word-api.herokuapp.com/word";
+
+        let response = reqwest::blocking::get(url)
+            .unwrap()
+            .json::<RandomWordResponse>()
+            .unwrap();
+
+        vec![response.word]
+    }
+}
+
+#[derive(Deserialize)]
+struct QuoteSourceResponse {
+    quote: HashMap<String, String>,
+}
+
+/// [TextSource] for generating a random word.
+#[derive(Default)]
+pub struct QuoteSource;
+
+impl TextSource for QuoteSource {
+    /// Returns quote as ["<quote>", "<author>"]
+    fn source_text(&self) -> Vec<String> {
+        let url = "https://zenquotes.io?api=random";
+
+        let response = reqwest::blocking::get(url)
+            .unwrap()
+            .json::<QuoteSourceResponse>()
+            .unwrap();
+
+        vec![
+            response.quote.get(&"q".to_string()).unwrap().to_owned(),
+            response.quote.get(&"a".to_string()).unwrap().to_owned(),
+        ]
     }
 }
