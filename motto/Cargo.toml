@@ -4,11 +4,19 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+# Image processing
 image = "0.24.4"
+# Random values
 rand = "0.8.5"
+# Text processing
 glyph_brush_layout = "0.2.3"
+# Dynamic global variables
 lazy_static = "1.4.0"
+# Http requests
 reqwest = { version = "0.10", features = ["blocking", "json"] } 
+# Local environment variables
 dotenv = "0.15.0"
+# Serialization
 serde = { version = "1.0", features = ["derive"] }
-    
+# Argument parsing    
+clap = { version = "4.0.32", features = ["derive"] }

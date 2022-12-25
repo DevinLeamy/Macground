@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::{collections::HashMap, default::Default, path::Path};
 
 use glyph_brush_layout::{ab_glyph::*, *};
-use image::Pixel;
+use image::{Pixel, Rgba};
 
 use crate::BackgroundImage;
 
@@ -60,6 +60,8 @@ pub struct TextConfig {
     pub text_scale: f32,
     /// Bounds of the window on which the text is drawn
     pub context_bounds: Bounds,
+    /// Color of the text
+    pub color: Rgba<u8>,
 }
 
 impl Default for TextConfig {
@@ -69,6 +71,7 @@ impl Default for TextConfig {
             text: "Motto".to_string(),
             text_scale: 40.0,
             context_bounds: Bounds::default(),
+            color: *Rgba::from_slice(&[255, 255, 255, 255]),
         }
     }
 }
@@ -114,10 +117,14 @@ pub fn draw_text<'a>(image: &mut BackgroundImage, text_config: TextConfig) {
                 let x_corrected = (bounds.min.x + x as f32) as u32;
                 let y_corrected = (bounds.min.y + y as f32) as u32;
 
-                let text_color = &[255u8, 255u8, 255u8, alpha];
-                let text_pixel = Pixel::from_slice(text_color);
+                let color = Rgba::from([
+                    text_config.color.0[0],
+                    text_config.color.0[1],
+                    text_config.color.0[2],
+                    alpha,
+                ]);
 
-                image.set_pixel(x_corrected, y_corrected, text_pixel);
+                image.set_pixel(x_corrected, y_corrected, &color);
             });
         } else {
             // println!("Could not outline glyph {:?}", raw_glyph);

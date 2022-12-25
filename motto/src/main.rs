@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 // std
+use clap::Parser;
 use std::default::Default;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -13,10 +14,14 @@ use serde::Deserialize;
 use source::{ImageSource, QuoteSource, RandomWordSource, TextSource};
 use text::{draw_text, Bounds, TextConfig};
 
+mod args;
 mod source;
 
+use crate::args::{BackgroundOptions, RawOptions, TextOptions};
+// use crate::args::BackgroundOptions;
 use crate::source::{ColorSource, Source};
 use crate::text::font_path;
+use args::Options;
 
 const WW: u32 = 3840;
 const WH: u32 = 2160;
@@ -29,6 +34,12 @@ Configurable things / CLI args:
 */
 
 fn main() {
+    // Parse arguments
+    let raw_options = RawOptions::parse();
+    let options = Options::from(raw_options);
+
+    println!("Macground Options {:?}", options);
+
     let pretty_images: Vec<&str> = vec![
         "https://images.pexels.com/photos/589840/pexels-photo-589840.jpeg?cs=srgb&dl=pexels-valiphotos-589840.jpg&fm=jpg",
         "https://hips.hearstapps.com/hmg-prod.s3.amazonaws.com/images/cute-cat-photos-1593441022.jpg?crop=0.670xw:1.00xh;0.167xw,0&resize=640:*"
@@ -39,22 +50,43 @@ fn main() {
         None => (WW, WH),
     };
 
-    // Text sources
-    let random_word_source = RandomWordSource::default();
-    let random_quote_source = QuoteSource::default();
-    let random_word = random_word_source.source_text()[0].to_owned();
-    let random_quote = random_quote_source.source_text();
+    // Create a background
+    let mut background = match options.background {
+        BackgroundOptions::Color(color) => {
+            let color_source = if &color == "random" {
+                ColorSource::random(width, height)
+            } else {
+                ColorSource::new(width, height, Rgba([255, 0, 0, 255]))
+            };
+            color_source.get_background()
+        }
+        BackgroundOptions::RandomImage => {
+            let random_image_url = get_random_image();
+            let image_source = ImageSource::new(width, height, random_image_url);
+            image_source.get_background()
+        }
+        BackgroundOptions::Url(url) => {
+            let image_source = ImageSource::new(width, height, url);
+            image_source.get_background()
+        }
+    };
 
-    // Image sources
-    // let image_source = ImageSource::new(width, height, image_urls[0].clone());
-    let image_source = ImageSource::new(width, height, pretty_images[0].to_string());
-    let color_source = ColorSource::random(width, height);
-    let mut background = image_source.get_background();
-    // let mut background = color_source.get_background();
+    // Create a message
+    let text = match options.text {
+        TextOptions::Message(message) => vec![message],
+        TextOptions::RandomQuote => {
+            let random_quote_source = QuoteSource::default();
+            random_quote_source.source_text()
+        }
+        TextOptions::RandomWord => {
+            let random_word_source = RandomWordSource::default();
+            random_word_source.source_text()
+        }
+    };
 
     let text_config = TextConfig {
-        text: random_quote[0].to_owned(),
-        text_scale: 100.0,
+        text: text[0].to_owned(),
+        text_scale: 400.0,
         font_path: font_path("font1.otf"),
         context_bounds: Bounds {
             width: background.width() as f32,
@@ -186,7 +218,7 @@ struct UnsplashResponse {
     urls: HashMap<String, String>,
 }
 
-fn get_random_image_urls() -> Vec<String> {
+fn get_random_image() -> String {
     // Loads the environment variables from .env
     dotenv().ok();
 
@@ -197,5 +229,5 @@ fn get_random_image_urls() -> Vec<String> {
         .json::<UnsplashResponse>()
         .unwrap();
 
-    vec![response.urls.get(&"full".to_string()).unwrap().to_owned()]
+    response.urls.get(&"full".to_string()).unwrap().to_owned()
 }
