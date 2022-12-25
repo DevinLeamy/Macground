@@ -61,7 +61,10 @@ struct Options {
 ```
 
 ### TODO
-- Argument parser 
-- Text boxes -> Layouts
-- Font loader being shit
-- Font size adjust to "reasonably" fit the screen
+- [ ] Argument parser 
+- [ ] Text boxes -> Layouts
+- [ ] Font loader being shit
+- [ ] Font size adjust to "reasonably" fit the screen
+- [ ] API for creating and using new sources 
+- [ ] Add option to save to a file location
+- [ ] Make the text size "fit" the text box
