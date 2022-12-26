@@ -108,6 +108,8 @@ fn main() {
     ));
     BackgroundImage::save(background, &output_path).expect("Failed to save background image.");
 
+    println!("Saved image to {:?}", output_path);
+
     display_image_as_background(output_path);
 }
 
