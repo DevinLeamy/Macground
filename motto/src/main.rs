@@ -12,7 +12,7 @@ use rand::distributions::Uniform;
 use rand::{thread_rng, Rng};
 use serde::Deserialize;
 use source::{ImageSource, QuoteSource, RandomWordSource, TextSource};
-use text::{draw_text, Bounds, TextConfig};
+use text::TextConfig;
 
 mod args;
 mod source;
@@ -20,11 +20,12 @@ mod source;
 use crate::args::{BackgroundOptions, RawOptions, TextOptions};
 // use crate::args::BackgroundOptions;
 use crate::source::{ColorSource, Source};
-use crate::text::font_path;
+use crate::text::{draw_textbox, font_path, TextBox};
 use args::Options;
 
 const WW: u32 = 3840;
 const WH: u32 = 2160;
+
 /*
 Configurable things / CLI args:
 - Font path
@@ -34,9 +35,7 @@ Configurable things / CLI args:
 */
 
 fn main() {
-    // Parse arguments
-    let raw_options = RawOptions::parse();
-    let options = Options::from(raw_options);
+    let options = Options::from(RawOptions::parse());
 
     println!("Macground Options {:?}", options);
 
@@ -44,7 +43,7 @@ fn main() {
         "https://images.pexels.com/photos/589840/pexels-photo-589840.jpeg?cs=srgb&dl=pexels-valiphotos-589840.jpg&fm=jpg",
         "https://hips.hearstapps.com/hmg-prod.s3.amazonaws.com/images/cute-cat-photos-1593441022.jpg?crop=0.670xw:1.00xh;0.167xw,0&resize=640:*"
     ];
-    // let image_urls = get_random_image_urls();
+
     let (width, height) = match get_display_resolution() {
         Some(dimensions) => dimensions,
         None => (WW, WH),
@@ -85,17 +84,19 @@ fn main() {
     };
 
     let text_config = TextConfig {
-        text: text[0].to_owned(),
-        text_scale: 400.0,
+        text_scale: 100.0,
         font_path: font_path("font1.otf"),
-        context_bounds: Bounds {
-            width: background.width() as f32,
-            height: background.height() as f32,
-        },
         ..Default::default()
     };
 
-    draw_text(&mut background, text_config);
+    let textbox = TextBox {
+        text: text[0].to_owned(),
+        width: 1200,
+        height: 900,
+        style: text_config,
+    };
+
+    draw_textbox(&mut background, textbox, width / 2, height / 2);
     let output_path = PathBuf::from(&format!(
         "{}/assets/backgrounds/{}",
         env!("CARGO_MANIFEST_DIR"),

@@ -41,94 +41,111 @@ impl<'a> FontLoader<'a> {
     }
 }
 
-/**
- * Bounds that the text must lie within.
- */
-#[derive(Default, Clone)]
-pub struct Bounds {
-    pub width: f32,
-    pub height: f32,
-}
-
 #[derive(Clone)]
 pub struct TextConfig {
     /// Path to the font used to display the text
     pub font_path: PathBuf,
-    /// Text to display
-    pub text: String,
     /// Scale of text in pixels
     pub text_scale: f32,
-    /// Bounds of the window on which the text is drawn
-    pub context_bounds: Bounds,
     /// Color of the text
     pub color: Rgba<u8>,
+    /// Text layout
+    pub layout: Layout<BuiltInLineBreaker>,
 }
 
 impl Default for TextConfig {
     fn default() -> TextConfig {
+        let layout = Layout::Wrap {
+            h_align: HorizontalAlign::Center,
+            v_align: VerticalAlign::Center,
+            line_breaker: BuiltInLineBreaker::UnicodeLineBreaker,
+        };
+
         TextConfig {
             font_path: font_path("font1.otf"),
-            text: "Motto".to_string(),
             text_scale: 40.0,
-            context_bounds: Bounds::default(),
             color: *Rgba::from_slice(&[255, 255, 255, 255]),
+            layout,
         }
     }
 }
 
-pub fn generate_glyphs(config: TextConfig) -> Vec<SectionGlyph> {
-    let layout = Layout::SingleLine {
-        h_align: HorizontalAlign::Center,
-        v_align: VerticalAlign::Center,
-        line_breaker: BuiltInLineBreaker::default(),
-    };
+pub struct TextBox {
+    /// The text inside of the text box
+    pub text: String,
+    /// Width of the text box
+    pub width: u32,
+    /// Height of the text box
+    pub height: u32,
+    /// Configuration options for text
+    pub style: TextConfig,
+}
 
-    let glyphs: Vec<SectionGlyph> = layout.calculate_glyphs(
-        &[(*FONT_LOADER).font(config.font_path.as_path())],
+// Draws a textbox onto a background image at the given position
+pub fn draw_textbox(image: &mut BackgroundImage, textbox: TextBox, screen_x: u32, screen_y: u32) {
+    let glyphs = generate_textbox_glyphs(&textbox);
+    draw_text(image, glyphs, textbox.style, screen_x, screen_y);
+}
+
+/// Generates outlined glyphs positioned at (0, 0) on the screen
+pub fn generate_textbox_glyphs(textbox: &TextBox) -> Vec<OutlinedGlyph> {
+    let text_style = &textbox.style;
+    let glyphs: Vec<SectionGlyph> = text_style.layout.calculate_glyphs(
+        &[(*FONT_LOADER).font(text_style.font_path.as_path())],
         &SectionGeometry {
-            screen_position: (
-                config.context_bounds.width / 2.0,
-                config.context_bounds.height / 2.0,
-            ),
+            bounds: (textbox.width as f32, textbox.height as f32),
             ..Default::default()
         },
         &[SectionText {
             font_id: FontId(0),
-            text: config.text.as_str(),
-            scale: PxScale::from(config.text_scale), // Pixel-height of the text
+            text: textbox.text.as_str(),
+            scale: PxScale::from(text_style.text_scale), // Pixel-height of the text
             ..Default::default()
         }],
     );
 
-    glyphs
-}
-
-pub fn draw_text<'a>(image: &mut BackgroundImage, text_config: TextConfig) {
-    let glyphs = generate_glyphs(text_config.clone());
-    let font = (*FONT_LOADER).font(text_config.font_path.as_path());
+    let mut outlined_glyphs = vec![];
+    let font = (*FONT_LOADER).font(text_style.font_path.as_path());
 
     for section_glyph in glyphs {
         let raw_glyph = section_glyph.glyph;
         if let Some(glyph) = font.outline_glyph(raw_glyph.clone()) {
-            let bounds = glyph.px_bounds();
-
-            glyph.draw(|x, y, coverage| {
-                let alpha = (255.0 * coverage) as u8;
-                let x_corrected = (bounds.min.x + x as f32) as u32;
-                let y_corrected = (bounds.min.y + y as f32) as u32;
-
-                let color = Rgba::from([
-                    text_config.color.0[0],
-                    text_config.color.0[1],
-                    text_config.color.0[2],
-                    alpha,
-                ]);
-
-                image.set_pixel(x_corrected, y_corrected, &color);
-            });
-        } else {
-            // println!("Could not outline glyph {:?}", raw_glyph);
+            outlined_glyphs.push(glyph);
         }
+    }
+
+    outlined_glyphs
+}
+
+/// Draws text to the screen at a given screen position (top-left coordinates)
+pub fn draw_text(
+    image: &mut BackgroundImage,
+    glyphs: Vec<OutlinedGlyph>,
+    text_config: TextConfig,
+    screen_x: u32,
+    screen_y: u32,
+) {
+    for glyph in glyphs {
+        let bounds = glyph.px_bounds();
+
+        glyph.draw(|x, y, coverage| {
+            // Offset (x, y) by the screen position of the text
+            let x = screen_x + x;
+            let y = screen_y + y;
+
+            let alpha = (255.0 * coverage) as u8;
+            let x_corrected = (bounds.min.x + x as f32) as u32;
+            let y_corrected = (bounds.min.y + y as f32) as u32;
+
+            let color = Rgba::from([
+                text_config.color.0[0],
+                text_config.color.0[1],
+                text_config.color.0[2],
+                alpha,
+            ]);
+
+            image.set_pixel(x_corrected, y_corrected, &color);
+        });
     }
 }
 
