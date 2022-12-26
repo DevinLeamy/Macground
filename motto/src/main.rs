@@ -84,8 +84,8 @@ fn main() {
     };
 
     let text_config = TextConfig {
-        text_scale: 100.0,
-        font_path: font_path("font1.otf"),
+        text_scale: options.font.font_size as f32,
+        font_path: font_path(&options.font.font),
         ..Default::default()
     };
 

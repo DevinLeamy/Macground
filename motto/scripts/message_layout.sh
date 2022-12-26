@@ -1,3 +1,4 @@
 cargo run --release -- \
     --color "random" \
-    --message "Hey Folks!"
+    --text-size 400 \
+    --random-word 
