@@ -55,7 +55,11 @@ fn main() {
             let color_source = if &color == "random" {
                 ColorSource::random(width, height)
             } else {
-                ColorSource::new(width, height, Rgba([255, 0, 0, 255]))
+                let parsed_color = parse_color(&color);
+                if parsed_color.is_none() {
+                    panic!("Invalid color {}", color)
+                }
+                ColorSource::new(width, height, Rgba(parsed_color.unwrap()))
             };
             color_source.get_background()
         }
@@ -231,4 +235,12 @@ fn get_random_image() -> String {
         .unwrap();
 
     response.urls.get(&"full".to_string()).unwrap().to_owned()
+}
+
+fn parse_color(raw_color: &str) -> Option<[u8; 4]> {
+    let parsed_color = csscolorparser::parse(raw_color);
+    match parsed_color {
+        Ok(color) => Some(color.to_rgba8()),
+        _ => None,
+    }
 }
