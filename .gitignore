@@ -7,3 +7,5 @@ images/
 .DS_Store
 assets/backgrounds/
 .env
+flamegraph.svg
+Icon
