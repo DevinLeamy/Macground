@@ -1,6 +1,7 @@
 #[allow(unused_variables)]
 use lazy_static::lazy_static;
 use std::path::PathBuf;
+use std::sync::Mutex;
 
 use std::{collections::HashMap, default::Default, path::Path};
 
@@ -10,34 +11,29 @@ use image::{Pixel, Rgba};
 use crate::BackgroundImage;
 
 lazy_static! {
-    pub static ref FONT_LOADER: FontLoader<'static> = FontLoader::new();
+    pub static ref FONT_LOADER: FontLoader = FontLoader::new();
 }
 
-pub struct FontLoader<'a> {
-    /// Raw bytes of loaded fonts
-    fonts_raw: Vec<Vec<u8>>,
+pub struct FontLoader {
     /// Mapping of font paths to font refs
-    fonts: HashMap<String, FontRef<'a>>,
+    fonts: Mutex<HashMap<String, FontRef<'static>>>,
 }
-impl<'a> FontLoader<'a> {
-    pub fn new() -> FontLoader<'a> {
-        let mut loader = Self {
-            fonts_raw: vec![],
-            fonts: HashMap::new(),
-        };
-
-        loader.load_font(font_path("font1.otf").as_path());
-
-        loader
+impl FontLoader {
+    pub fn new() -> FontLoader {
+        Self {
+            fonts: Mutex::new(HashMap::new()),
+        }
     }
 
-    pub fn load_font(&mut self, path: &Path) -> () {
-        let bytes = std::fs::read(path).unwrap();
-        self.fonts_raw.push(bytes);
+    pub fn load_font(&self, name: String, path: &Path) -> () {
+        // Create a static reference to the font using Vec<_>.leak()
+        let bytes = std::fs::read(path).unwrap().leak();
+        let font_ref = FontRef::try_from_slice(bytes).unwrap();
+        self.fonts.lock().unwrap().insert(name, font_ref);
     }
 
-    pub fn font(&'a self, _path: &Path) -> FontRef<'a> {
-        FontRef::try_from_slice(&self.fonts_raw[0]).unwrap()
+    pub fn font(&self, name: String) -> FontRef<'_> {
+        self.fonts.lock().unwrap().get(&name).unwrap().clone()
     }
 }
 
@@ -90,8 +86,10 @@ pub fn draw_textbox(image: &mut BackgroundImage, textbox: TextBox, screen_x: u32
 /// Generates outlined glyphs positioned at (0, 0) on the screen
 pub fn generate_textbox_glyphs(textbox: &TextBox) -> Vec<OutlinedGlyph> {
     let text_style = &textbox.style;
+    let font_ref = (*FONT_LOADER).font("first".to_string());
+
     let glyphs: Vec<SectionGlyph> = text_style.layout.calculate_glyphs(
-        &[(*FONT_LOADER).font(text_style.font_path.as_path())],
+        &[font_ref.clone()],
         &SectionGeometry {
             bounds: (textbox.width as f32, textbox.height as f32),
             ..Default::default()
@@ -105,11 +103,9 @@ pub fn generate_textbox_glyphs(textbox: &TextBox) -> Vec<OutlinedGlyph> {
     );
 
     let mut outlined_glyphs = vec![];
-    let font = (*FONT_LOADER).font(text_style.font_path.as_path());
-
     for section_glyph in glyphs {
         let raw_glyph = section_glyph.glyph;
-        if let Some(glyph) = font.outline_glyph(raw_glyph.clone()) {
+        if let Some(glyph) = font_ref.outline_glyph(raw_glyph.clone()) {
             outlined_glyphs.push(glyph);
         }
     }

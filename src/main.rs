@@ -20,19 +20,11 @@ mod source;
 use crate::args::{BackgroundOptions, RawOptions, TextOptions};
 // use crate::args::BackgroundOptions;
 use crate::source::{ColorSource, Source};
-use crate::text::{draw_textbox, font_path, TextBox};
+use crate::text::{draw_textbox, TextBox, FONT_LOADER};
 use args::Options;
 
 const WW: u32 = 3840;
 const WH: u32 = 2160;
-
-/*
-Configurable things / CLI args:
-- Font path
-- Text
-- Background color
-- Text color
-*/
 
 fn main() {
     let options = Options::from(RawOptions::parse());
@@ -87,9 +79,13 @@ fn main() {
         }
     };
 
+    // Load the required fonts
+    let font_path = options.font.font_path.clone();
+    (*FONT_LOADER).load_font("first".to_string(), PathBuf::from(font_path).as_path());
+
     let text_config = TextConfig {
         text_scale: options.font.font_size as f32,
-        font_path: font_path(&options.font.font),
+        font_path: options.font.font_path.into(),
         ..Default::default()
     };
 

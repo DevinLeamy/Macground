@@ -18,3 +18,5 @@ macground --color "random" --random-quote
 - [ ] Add option to save to a file location
 - [ ] Make the text size "fit" the text box
 - [ ] Display an image given the relative path to the image
+- [ ] Window support
+- [ ] Linux support

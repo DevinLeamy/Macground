@@ -1,4 +1,5 @@
 cargo run --release -- \
-    --color "rgba(100, 100, 255, 0.8)" \
+    --color "random" \
     --text-size 400 \
+    --font "assets/fonts/font5.otf" \
     --random-word 
