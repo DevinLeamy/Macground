@@ -1,5 +1,4 @@
 use clap::Parser;
-use image::Rgba;
 use serde::{Deserialize, Serialize};
 
 #[derive(Parser, Debug)]
