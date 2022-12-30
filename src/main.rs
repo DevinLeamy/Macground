@@ -20,7 +20,7 @@ mod source;
 use crate::args::{BackgroundOptions, RawOptions, TextOptions};
 // use crate::args::BackgroundOptions;
 use crate::source::{ColorSource, Source};
-use crate::text::{draw_textbox, TextBox, FONT_LOADER};
+use crate::text::{draw_textbox, TextBox, TextSize, FONT_LOADER};
 use args::Options;
 
 const WW: u32 = 3840;
@@ -85,14 +85,18 @@ fn main() {
     (*FONT_LOADER).load_font("first".to_string(), PathBuf::from(font_path).as_path());
 
     let text_config = TextConfig {
-        text_scale: options.font.font_size as f32,
+        size: match options.font.font_size {
+            Some(size) => TextSize::PxScale(size as f32),
+            None => TextSize::FillParent,
+        },
         font_path: options.font.font_path.into(),
+        color: Rgba(parse_color(&options.font.color).unwrap()),
         ..Default::default()
     };
 
     let textbox = TextBox {
         text: text[0].to_owned(),
-        width: 1200,
+        width: 1800,
         height: 900,
         style: text_config,
     };

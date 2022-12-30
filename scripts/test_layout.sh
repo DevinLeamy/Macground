@@ -1,5 +1,5 @@
 cargo run --release -- \
     --color "random" \
-    --text-size 400 \
-    --font "assets/fonts/font5.otf" \
-    --random-word 
+    --font "assets/fonts/font1.otf" \
+    --text-color "black" \
+    --random-quote

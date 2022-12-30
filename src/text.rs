@@ -38,11 +38,19 @@ impl FontLoader {
 }
 
 #[derive(Clone)]
+pub enum TextSize {
+    /// Text scale in pixels
+    PxScale(f32),
+    /// Fill the box containing the text
+    FillParent,
+}
+
+#[derive(Clone)]
 pub struct TextConfig {
     /// Path to the font used to display the text
     pub font_path: PathBuf,
-    /// Scale of text in pixels
-    pub text_scale: f32,
+    /// Size of the text
+    pub size: TextSize,
     /// Color of the text
     pub color: Rgba<u8>,
     /// Text layout
@@ -59,7 +67,7 @@ impl Default for TextConfig {
 
         TextConfig {
             font_path: font_path("font1.otf"),
-            text_scale: 40.0,
+            size: TextSize::FillParent,
             color: *Rgba::from_slice(&[255, 255, 255, 255]),
             layout,
         }
@@ -88,29 +96,97 @@ pub fn generate_textbox_glyphs(textbox: &TextBox) -> Vec<OutlinedGlyph> {
     let text_style = &textbox.style;
     let font_ref = (*FONT_LOADER).font("first".to_string());
 
-    let glyphs: Vec<SectionGlyph> = text_style.layout.calculate_glyphs(
-        &[font_ref.clone()],
-        &SectionGeometry {
-            bounds: (textbox.width as f32, textbox.height as f32),
-            ..Default::default()
-        },
-        &[SectionText {
-            font_id: FontId(0),
-            text: textbox.text.as_str(),
-            scale: PxScale::from(text_style.text_scale), // Pixel-height of the text
-            ..Default::default()
-        }],
-    );
+    match text_style.size {
+        TextSize::PxScale(scale) => {
+            let glyphs: Vec<SectionGlyph> = text_style.layout.calculate_glyphs(
+                &[font_ref.clone()],
+                &SectionGeometry {
+                    bounds: (textbox.width as f32, textbox.height as f32),
+                    ..Default::default()
+                },
+                &[SectionText {
+                    font_id: FontId(0),
+                    text: textbox.text.as_str(),
+                    scale: PxScale::from(scale), // Pixel-height of the text
+                    ..Default::default()
+                }],
+            );
 
-    let mut outlined_glyphs = vec![];
-    for section_glyph in glyphs {
-        let raw_glyph = section_glyph.glyph;
-        if let Some(glyph) = font_ref.outline_glyph(raw_glyph.clone()) {
-            outlined_glyphs.push(glyph);
+            let mut outlined_glyphs = vec![];
+            for section_glyph in glyphs {
+                let raw_glyph = section_glyph.glyph;
+                if let Some(glyph) = font_ref.outline_glyph(raw_glyph.clone()) {
+                    outlined_glyphs.push(glyph);
+                }
+            }
+
+            outlined_glyphs
+        }
+        TextSize::FillParent => {
+            // Attempts to draw the text with the given text size. If it cannot draw it within the bounds,
+            // None is returned.
+            let attempt_text_size = |text_size: f32| -> Option<Vec<OutlinedGlyph>> {
+                let glyphs: Vec<SectionGlyph> = text_style.layout.calculate_glyphs(
+                    &[font_ref.clone()],
+                    &SectionGeometry {
+                        bounds: (textbox.width as f32, textbox.height as f32),
+                        ..Default::default()
+                    },
+                    &[SectionText {
+                        font_id: FontId(0),
+                        text: textbox.text.as_str(),
+                        scale: PxScale::from(text_size), // Pixel-height of the text
+                        ..Default::default()
+                    }],
+                );
+
+                let mut outlined_glyphs = vec![];
+                for section_glyph in glyphs {
+                    let raw_glyph = section_glyph.glyph;
+                    if let Some(glyph) = font_ref.outline_glyph(raw_glyph.clone()) {
+                        if within_bounds(&glyph, &textbox) {
+                            outlined_glyphs.push(glyph);
+                        } else {
+                            return None;
+                        }
+                    }
+                }
+
+                Some(outlined_glyphs)
+            };
+
+            // Find the text size that will fill the text box by increasing and
+            // decreasing the text size as required.
+            //
+            // TODO: This is a very slow approach to testing text sizes! Can definitely
+            // be made faster through binary search and/or something else.
+
+            let mut text_size = 20.0; // Some "random" starting text size
+            while attempt_text_size(text_size + 1.0).is_some() {
+                text_size += 1.0;
+            }
+            while attempt_text_size(text_size).is_none() {
+                text_size -= 1.0;
+            }
+
+            attempt_text_size(text_size).unwrap()
         }
     }
+}
 
-    outlined_glyphs
+/// Check if a glyph lines within the bounds of a textbox
+pub fn within_bounds(glyph: &OutlinedGlyph, textbox: &TextBox) -> bool {
+    let half_width = textbox.width as f32 / 2.0;
+    let half_height = textbox.height as f32 / 2.0;
+    let bounds = glyph.px_bounds();
+
+    if bounds.min.x < -half_width || bounds.max.x >= half_width {
+        false
+    } else if bounds.min.y < -half_height || bounds.max.y >= half_height {
+        false
+    } else {
+        true
+    }
 }
 
 /// Draws text to the screen at a given screen position (top-left coordinates)

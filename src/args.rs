@@ -37,8 +37,8 @@ impl Options {
         let mut text = TextOptions::RandomWord;
         let mut font = FontOptions {
             font_path: "assets/fonts/font1.otf".to_string(),
-            color: [255, 255, 255, 255],
-            font_size: 200,
+            color: "white".to_string(),
+            font_size: None, // Fill the parent
         };
 
         if let Some(color) = raw_options.color {
@@ -58,10 +58,13 @@ impl Options {
         }
 
         if let Some(size) = raw_options.text_size {
-            font.font_size = size;
+            font.font_size = Some(size);
         }
         if let Some(font_path) = raw_options.font {
             font.font_path = font_path;
+        }
+        if let Some(font_color) = raw_options.text_color {
+            font.color = font_color;
         }
 
         Self {
@@ -92,7 +95,7 @@ pub enum TextOptions {
 pub struct FontOptions {
     /// Relative path to the font
     pub font_path: String,
-    pub color: [u8; 4],
+    pub color: String,
     /// Size of the font in pixels
-    pub font_size: u32,
+    pub font_size: Option<u32>,
 }
