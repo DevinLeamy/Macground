@@ -3,23 +3,35 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Parser, Debug)]
 pub struct RawOptions {
-    #[arg(short, long)]
+    /// Url of a background image
+    #[arg(long)]
     pub background_image: Option<String>,
-    #[arg(short, long)]
+    /// Flag to set the background to a random image
+    #[arg(long)]
     pub random_image: bool,
-    #[arg(short, long)]
+    /// Color of the background, if no image is set.
+    /// Accepts: "<color-name>" | "rgb(...)" | "#FFAAEE" | "hsl(...)" | "random"
+    #[arg(long)]
     pub color: Option<String>,
-    #[arg(short, long)]
+    /// Message to display to the screen
+    #[arg(long)]
     pub message: Option<String>,
-    #[arg(short, long)]
+    /// Random quote to display to the screen
+    #[arg(long)]
     pub random_quote: bool,
-    #[arg(short, long)]
+    /// Random would to display to the screen
+    #[arg(long)]
     pub random_word: bool,
-    #[arg(short, long)]
+    /// Color of the text, if any is displayed
+    /// Accepts: "<color-name>" | "rgb(...)" | "#FFAAEE" | "hsl(...)" | "random"
+    #[arg(long)]
     pub text_color: Option<String>,
-    #[arg(short, long)]
+    /// Size of the text characters in pixels, defaults to filling
+    /// the text's parent.
+    #[arg(long)]
     pub text_size: Option<u32>,
-    #[arg(short, long)]
+    /// Path to an otf or ttf font
+    #[arg(long)]
     pub font: Option<String>,
 }
 
