@@ -57,7 +57,7 @@ Options:
 
 Macground is supported on:
 - [x] MacOS 
-- [ ] Windows
+- [x] Windows
 - [x] Linux 
 
 #### Linux requirements
