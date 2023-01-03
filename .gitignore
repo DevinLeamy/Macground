@@ -5,7 +5,7 @@ Cargo.lock
 *.pdb
 images/
 .DS_Store
-assets/backgrounds/
+assets/backgrounds/*
 .env
 flamegraph.svg
 Icon

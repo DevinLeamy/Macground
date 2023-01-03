@@ -1,12 +1,13 @@
-use std::collections::HashMap;
 // std
 use clap::Parser;
+use std::collections::HashMap;
 use std::default::Default;
+use std::error::Error;
 use std::path::PathBuf;
-use std::process::{Command, Stdio};
 // third party
 use image::{ImageBuffer, ImageResult, Pixel, Rgba};
 mod text;
+use display_info::DisplayInfo;
 use dotenv::dotenv;
 use rand::distributions::Uniform;
 use rand::{thread_rng, Rng};
@@ -18,7 +19,6 @@ mod args;
 mod source;
 
 use crate::args::{BackgroundOptions, RawOptions, TextOptions};
-// use crate::args::BackgroundOptions;
 use crate::source::{ColorSource, Source};
 use crate::text::{draw_textbox, TextBox, TextSize, FONT_LOADER};
 use args::Options;
@@ -28,8 +28,6 @@ const WH: u32 = 2160;
 
 fn main() {
     let options = Options::from(RawOptions::parse());
-
-    println!("Macground Options {:?}", options);
 
     #[allow(unused)]
     let pretty_images: Vec<&str> = vec![
@@ -41,6 +39,8 @@ fn main() {
         Some(dimensions) => dimensions,
         None => (WW, WH),
     };
+
+    println!("Width: {width}, Height: {height}");
 
     // Create a background
     let mut background = match options.background {
@@ -96,8 +96,8 @@ fn main() {
 
     let textbox = TextBox {
         text: text[0].to_owned(),
-        width: 1800,
-        height: 900,
+        width: width / 2,
+        height: height / 5,
         style: text_config,
     };
 
@@ -109,9 +109,10 @@ fn main() {
     ));
     BackgroundImage::save(background, &output_path).expect("Failed to save background image.");
 
-    println!("Saved image to {:?}", output_path);
-
-    display_image_as_background(output_path);
+    match display_image_as_background(&output_path) {
+        Ok(()) => println!("Updated wallpaper with image [{:?}]", output_path),
+        Err(e) => println!("Failed to set wallpaper. {e}"),
+    };
 }
 
 fn generate_file_name() -> String {
@@ -121,58 +122,26 @@ fn generate_file_name() -> String {
     format!("background_{id}.png")
 }
 
-/**
- * Use apple script to set the background image
- * to the image found at the provided `image_path`
- *
- * Note: This only sets the background image on one desktop
- * TODO: Allow the user to configure the desktop that gets modified
- */
-fn display_image_as_background(image_path: PathBuf) -> () {
-    Command::new("osascript")
-        .args([
-            "-e",
-            format!(
-                "tell application \"Finder\" to set desktop picture to POSIX file \"{}\"",
-                image_path.to_str().unwrap()
-            )
-            .as_str(),
-        ])
-        .spawn()
-        .expect("failed to set background image");
+/// Sets the background image on all active desktops.
+///
+/// Note: Setting the wallpaper of individual desktop is currently not supported by
+///       wallpaper. It can be done easily on MacOS to be consitent between platforms
+///       all desktops are set. This should eventually become a configuration options.
+fn display_image_as_background(image_path: &PathBuf) -> Result<(), Box<dyn Error>> {
+    wallpaper::set_from_path(image_path.to_str().unwrap())
 }
 
-/// Computes the dimensions of your display. If there are multiple displays, it
-/// computes the dimensions of the first one it finds.
+/// Computes the dimensions of the primary display.
 fn get_display_resolution() -> Option<(u32, u32)> {
-    let process_one = Command::new("system_profiler")
-        .arg("SPDisplaysDataType")
-        .stdout(Stdio::piped())
-        .spawn()
-        .unwrap();
-    let output = Command::new("awk")
-        .arg("/Resolution/{print $2, $3, $4}")
-        .stdin(Stdio::from(process_one.stdout.unwrap()))
-        .output()
-        .unwrap();
-
-    let result = std::str::from_utf8(&output.stdout).unwrap();
-    // Some: "[width0, x, height0, x, width1, x, height1]"
-    let split = result.split_whitespace();
-
-    let mut dimensions: Vec<u32> = vec![];
-    for str in split {
-        if str == "x" {
-            continue;
-        }
-        dimensions.push(str.parse::<u32>().unwrap());
+    let displays = DisplayInfo::all().unwrap();
+    for display in &displays {
+        dbg!(display);
+    }
+    if let Some(primary) = displays.iter().filter(|display| display.is_primary).next() {
+        return Some((primary.width as u32, primary.height as u32));
     }
 
-    if dimensions.is_empty() {
-        None
-    } else {
-        Some((dimensions[0], dimensions[1]))
-    }
+    None
 }
 
 #[derive(Debug)]
@@ -210,7 +179,7 @@ impl BackgroundImage {
     /// Sets the color of a given pixel
     pub fn set_pixel(&mut self, x: u32, y: u32, color: &Rgba<u8>) {
         if x >= self.width() || y >= self.height() {
-            println!("Out of bounds ({x}, {y})");
+            // println!("Out of bounds ({x}, {y})");
             return;
         }
         self.buffer.get_pixel_mut(x, y).blend(&color);

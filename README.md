@@ -54,8 +54,22 @@ Options:
 ``` 
 
 ### Platforms
+
 Macground is supported on:
 - [x] MacOS 
 - [ ] Windows
-- [ ] Linux 
+- [x] Linux 
 
+#### Linux requirements
+
+On Linux, you need to install `libxcb` and `libxrandr`
+
+Debian/Ubuntu:
+```bash
+apt-get install libxcb1 libxrandr2
+```
+
+Alpine:
+```bash
+apk add libxcb1 libxrandr2
+```
