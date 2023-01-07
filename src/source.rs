@@ -8,8 +8,8 @@ use serde::Deserialize;
 
 use crate::BackgroundImage;
 
-pub trait Source {
-    fn get_background(&self) -> BackgroundImage;
+pub trait Source<T> {
+    fn fetch(&self) -> T;
 }
 
 pub struct ColorSource {
@@ -31,8 +31,8 @@ impl ColorSource {
     }
 }
 
-impl Source for ColorSource {
-    fn get_background(&self) -> BackgroundImage {
+impl Source<BackgroundImage> for ColorSource {
+    fn fetch(&self) -> BackgroundImage {
         BackgroundImage::new(self.width, self.height, &self.color)
     }
 }
@@ -63,8 +63,8 @@ impl ImageSource {
     }
 }
 
-impl Source for ImageSource {
-    fn get_background(&self) -> BackgroundImage {
+impl Source<BackgroundImage> for ImageSource {
+    fn fetch(&self) -> BackgroundImage {
         let response = reqwest::blocking::get(&self.image_url).unwrap();
         let image = image::load_from_memory(&response.bytes().unwrap()).unwrap();
         let image = image.resize_to_fill(
@@ -78,10 +78,6 @@ impl Source for ImageSource {
     }
 }
 
-pub trait TextSource {
-    fn source_text(&self) -> Vec<String>;
-}
-
 #[derive(Deserialize)]
 struct RandomWordResponse {
     word: String,
@@ -91,8 +87,8 @@ struct RandomWordResponse {
 #[derive(Default)]
 pub struct RandomWordSource;
 
-impl TextSource for RandomWordSource {
-    fn source_text(&self) -> Vec<String> {
+impl Source<Vec<String>> for RandomWordSource {
+    fn fetch(&self) -> Vec<String> {
         let url = "https://random-word-api.herokuapp.com/word";
 
         let response = reqwest::blocking::get(url)
@@ -113,9 +109,9 @@ struct QuoteSourceResponse {
 #[derive(Default)]
 pub struct QuoteSource;
 
-impl TextSource for QuoteSource {
+impl Source<Vec<String>> for QuoteSource {
     /// Returns quote as ["<quote>", "<author>"]
-    fn source_text(&self) -> Vec<String> {
+    fn fetch(&self) -> Vec<String> {
         let url = "https://zenquotes.io?api=random";
 
         let response = reqwest::blocking::get(url)
