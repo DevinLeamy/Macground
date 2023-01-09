@@ -48,7 +48,7 @@ impl Options {
         let mut background = BackgroundOptions::Color("random".to_string());
         let mut text = TextOptions::RandomWord;
         let mut font = FontOptions {
-            font_path: "assets/fonts/font1.otf".to_string(),
+            font_path: None,
             color: "white".to_string(),
             font_size: None, // Fill the parent
         };
@@ -72,9 +72,7 @@ impl Options {
         if let Some(size) = raw_options.text_size {
             font.font_size = Some(size);
         }
-        if let Some(font_path) = raw_options.font {
-            font.font_path = font_path;
-        }
+        font.font_path = raw_options.font;
         if let Some(font_color) = raw_options.text_color {
             font.color = font_color;
         }
@@ -106,7 +104,7 @@ pub enum TextOptions {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct FontOptions {
     /// Relative path to the font
-    pub font_path: String,
+    pub font_path: Option<String>,
     pub color: String,
     /// Size of the font in pixels
     pub font_size: Option<u32>,

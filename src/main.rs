@@ -17,10 +17,12 @@ use text::TextConfig;
 
 mod args;
 mod source;
+mod utils;
 
 use crate::args::{BackgroundOptions, RawOptions, TextOptions};
 use crate::source::{ColorSource, Source};
 use crate::text::{draw_textbox, TextBox, TextSize, FONT_LOADER};
+use crate::utils::application_data_path;
 use args::Options;
 
 const WW: u32 = 3840;
@@ -82,14 +84,16 @@ fn main() {
 
     // Load the required fonts
     let font_path = options.font.font_path.clone();
-    (*FONT_LOADER).load_font("first".to_string(), PathBuf::from(font_path).as_path());
+    if let Some(font_path) = font_path {
+        (*FONT_LOADER).load_font("first".to_string(), PathBuf::from(font_path).as_path());
+    }
 
     let text_config = TextConfig {
         size: match options.font.font_size {
             Some(size) => TextSize::PxScale(size as f32),
             None => TextSize::FillParent,
         },
-        font_path: options.font.font_path.into(),
+        font: "default".to_string(),
         color: Rgba(parse_color(&options.font.color).unwrap()),
         ..Default::default()
     };
@@ -102,11 +106,15 @@ fn main() {
     };
 
     draw_textbox(&mut background, textbox, width / 2, height / 2);
-    let output_path = PathBuf::from(&format!(
-        "{}/assets/backgrounds/{}",
-        env!("CARGO_MANIFEST_DIR"),
-        generate_file_name()
-    ));
+    let mut output_path = application_data_path();
+    output_path.push("backgrounds");
+    std::fs::create_dir_all(&output_path).unwrap();
+    output_path.push(generate_file_name());
+    // let output_path = PathBuf::from(&format!(
+    //     "{}/assets/backgrounds/{}",
+    //     env!("CARGO_MANIFEST_DIR"),
+    //     generate_file_name()
+    // ));
     BackgroundImage::save(background, &output_path).expect("Failed to save background image.");
 
     match display_image_as_background(&output_path) {

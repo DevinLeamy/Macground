@@ -29,3 +29,5 @@ csscolorparser = "0.6.2"
 wallpaper = "3.2.0"
 # Fetching display information on multiple platforms 
 display-info = "0.3.2"
+# Provides platform-specific locations for storing data
+directories = "4.0"
