@@ -1,6 +1,6 @@
 #[allow(unused_variables)]
 use lazy_static::lazy_static;
-use std::path::PathBuf;
+// use std::path::PathBuf;
 use std::sync::Mutex;
 
 use std::{collections::HashMap, default::Default, path::Path};
@@ -20,9 +20,21 @@ pub struct FontLoader {
 }
 impl FontLoader {
     pub fn new() -> FontLoader {
-        Self {
+        // Load the default font
+        let default_font = include_bytes!("../assets/fonts/font1.otf");
+        let font_ref = FontRef::try_from_slice(default_font).unwrap();
+
+        let loader = Self {
             fonts: Mutex::new(HashMap::new()),
-        }
+        };
+
+        loader
+            .fonts
+            .lock()
+            .unwrap()
+            .insert("default".to_string(), font_ref);
+
+        loader
     }
 
     pub fn load_font(&self, name: String, path: &Path) -> () {
@@ -47,8 +59,8 @@ pub enum TextSize {
 
 #[derive(Clone)]
 pub struct TextConfig {
-    /// Path to the font used to display the text
-    pub font_path: PathBuf,
+    /// Name of the font (as found in the [`FontLoader`])
+    pub font: String,
     /// Size of the text
     pub size: TextSize,
     /// Color of the text
@@ -66,7 +78,7 @@ impl Default for TextConfig {
         };
 
         TextConfig {
-            font_path: font_path("font1.otf"),
+            font: "default".to_string(),
             size: TextSize::FillParent,
             color: *Rgba::from_slice(&[255, 255, 255, 255]),
             layout,
@@ -94,7 +106,7 @@ pub fn draw_textbox(image: &mut BackgroundImage, textbox: TextBox, screen_x: u32
 /// Generates outlined glyphs positioned at (0, 0) on the screen
 pub fn generate_textbox_glyphs(textbox: &TextBox) -> Vec<OutlinedGlyph> {
     let text_style = &textbox.style;
-    let font_ref = (*FONT_LOADER).font("first".to_string());
+    let font_ref = (*FONT_LOADER).font("default".to_string());
 
     match text_style.size {
         TextSize::PxScale(scale) => {
@@ -221,7 +233,7 @@ pub fn draw_text(
     }
 }
 
-pub fn font_path(name: &str) -> PathBuf {
-    let path = format!("{}/assets/fonts/{name}", env!("CARGO_MANIFEST_DIR"));
-    PathBuf::from(path)
-}
+// pub fn font_path(name: &str) -> PathBuf {
+//     let path = format!("{}/assets/fonts/{name}", env!("CARGO_MANIFEST_DIR"));
+//     PathBuf::from(path)
+// }
