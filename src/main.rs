@@ -42,8 +42,6 @@ fn main() {
         None => (WW, WH),
     };
 
-    println!("Width: {width}, Height: {height}");
-
     // Create a background
     let mut background = match options.background {
         BackgroundOptions::Color(color) => {
@@ -110,15 +108,10 @@ fn main() {
     output_path.push("backgrounds");
     std::fs::create_dir_all(&output_path).unwrap();
     output_path.push(generate_file_name());
-    // let output_path = PathBuf::from(&format!(
-    //     "{}/assets/backgrounds/{}",
-    //     env!("CARGO_MANIFEST_DIR"),
-    //     generate_file_name()
-    // ));
     BackgroundImage::save(background, &output_path).expect("Failed to save background image.");
 
     match display_image_as_background(&output_path) {
-        Ok(()) => println!("Updated wallpaper with image [{:?}]", output_path),
+        Ok(()) => println!("Updated wallpaper."),
         Err(e) => println!("Failed to set wallpaper. {e}"),
     };
 }
@@ -142,9 +135,6 @@ fn display_image_as_background(image_path: &PathBuf) -> Result<(), Box<dyn Error
 /// Computes the dimensions of the primary display.
 fn get_display_resolution() -> Option<(u32, u32)> {
     let displays = DisplayInfo::all().unwrap();
-    for display in &displays {
-        dbg!(display);
-    }
     if let Some(primary) = displays.iter().filter(|display| display.is_primary).next() {
         return Some((primary.width as u32, primary.height as u32));
     }
@@ -187,7 +177,6 @@ impl BackgroundImage {
     /// Sets the color of a given pixel
     pub fn set_pixel(&mut self, x: u32, y: u32, color: &Rgba<u8>) {
         if x >= self.width() || y >= self.height() {
-            // println!("Out of bounds ({x}, {y})");
             return;
         }
         self.buffer.get_pixel_mut(x, y).blend(&color);
@@ -205,6 +194,7 @@ struct UnsplashResponse {
 
 fn get_random_image() -> String {
     // Loads the environment variables from .env
+    // .env will contents will override any existing UNSPLASH_API_KEY environment variables.
     dotenv().ok();
 
     let api_key = std::env::var("UNSPLASH_API_KEY").unwrap();

@@ -30,9 +30,9 @@ pub struct RawOptions {
     /// the text's parent.
     #[arg(long)]
     pub text_size: Option<u32>,
-    /// Path to an otf or ttf font
-    #[arg(long)]
-    pub font: Option<String>,
+    // Path to an otf or ttf font
+    // #[arg(long)]
+    // pub font: Option<String>,
 }
 
 // save layouts.
@@ -72,7 +72,7 @@ impl Options {
         if let Some(size) = raw_options.text_size {
             font.font_size = Some(size);
         }
-        font.font_path = raw_options.font;
+        font.font_path = None; // raw_options.font;
         if let Some(font_color) = raw_options.text_color {
             font.color = font_color;
         }
@@ -97,7 +97,7 @@ pub enum BackgroundOptions {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum TextOptions {
     Message(String),
-    RandomQuote, // Requires an API key (currently)
+    RandomQuote,
     RandomWord,
 }
 
