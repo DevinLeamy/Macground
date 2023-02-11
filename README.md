@@ -32,7 +32,7 @@ Usage: macground [OPTIONS]
 
 Options:
       --background-image <BACKGROUND_IMAGE>
-          Url of a background image
+          Url of a background image [requires a valid `UNSPLASH_SECRET_KEY` environment variable - get one [here](https://unsplash.com/oauth/applications)]
       --random-image
           Flag to set the background to a random image
       --color <COLOR>
