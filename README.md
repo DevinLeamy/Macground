@@ -15,15 +15,15 @@
 # Displays an image with a quote set in a random color
 macground --random-image --text-color "random" --random-quote
 
-# Displays "Macground" on a maroon background with a custom font
-macground --message "Macground" --color "maroon" --font "./roboto.oft"
+# Displays "Macground" on a maroon background in a large font
+macground --message "Macground" --color "maroon" --text-size 200
 ```
 
 
 ### Installation
 Install Macground using [cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html).
 ```bash
-cargo install macground
+cargo install --git https://github.com/DevinLeamy/Macground.git
 ```
 
 ### Options
@@ -47,8 +47,6 @@ Options:
           Color of the text, if any is displayed Accepts: "<color-name>" | "rgb(...)" | "#FFAAEE" | "hsl(...)" | "random"
       --text-size <TEXT_SIZE>
           Size of the text characters in pixels, defaults to filling the text's parent
-      --font <FONT>
-          Path to an otf or ttf font
   -h, --help
           Print help information
 ``` 
