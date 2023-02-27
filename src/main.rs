@@ -31,12 +31,6 @@ const WH: u32 = 2160;
 fn main() {
     let options = Options::from(RawOptions::parse());
 
-    #[allow(unused)]
-    let pretty_images: Vec<&str> = vec![
-        "https://images.pexels.com/photos/589840/pexels-photo-589840.jpeg?cs=srgb&dl=pexels-valiphotos-589840.jpg&fm=jpg",
-        "https://hips.hearstapps.com/hmg-prod.s3.amazonaws.com/images/cute-cat-photos-1593441022.jpg?crop=0.670xw:1.00xh;0.167xw,0&resize=640:*"
-    ];
-
     let (width, height) = match get_display_resolution() {
         Some(dimensions) => dimensions,
         None => (WW, WH),
@@ -69,7 +63,13 @@ fn main() {
 
     // Create a message
     let text = match options.text {
-        TextOptions::Message(message) => vec![message],
+        TextOptions::Message(message) => {
+            if message.len() > 0 {
+                vec![message]
+            } else {
+                vec![]
+            }
+        }
         TextOptions::RandomQuote => {
             let random_quote_source = QuoteSource::default();
             random_quote_source.source_text()
@@ -96,14 +96,16 @@ fn main() {
         ..Default::default()
     };
 
-    let textbox = TextBox {
-        text: text[0].to_owned(),
-        width: width / 2,
-        height: height / 5,
-        style: text_config,
-    };
+    if text.len() > 0 {
+        let textbox = TextBox {
+            text: text[0].to_owned(),
+            width: width / 2,
+            height: height / 5,
+            style: text_config,
+        };
 
-    draw_textbox(&mut background, textbox, width / 2, height / 2);
+        draw_textbox(&mut background, textbox, width / 2, height / 2);
+    }
     let mut output_path = application_data_path();
     output_path.push("backgrounds");
     std::fs::create_dir_all(&output_path).unwrap();

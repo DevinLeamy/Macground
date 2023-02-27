@@ -1,10 +1,12 @@
 use std::collections::HashMap;
+use std::io::BufReader;
 
 use image::Rgba;
 use rand::distributions::Uniform;
 use rand::{thread_rng, Rng};
 use reqwest;
 use serde::Deserialize;
+use word_generator::{langs, *};
 
 use crate::BackgroundImage;
 
@@ -82,25 +84,15 @@ pub trait TextSource {
     fn source_text(&self) -> Vec<String>;
 }
 
-#[derive(Deserialize)]
-struct RandomWordResponse {
-    word: String,
-}
-
 /// [TextSource] for generating a random word.
 #[derive(Default)]
 pub struct RandomWordSource;
 
 impl TextSource for RandomWordSource {
     fn source_text(&self) -> Vec<String> {
-        let url = "https://random-word-api.herokuapp.com/word";
-
-        let response = reqwest::blocking::get(url)
-            .unwrap()
-            .json::<RandomWordResponse>()
-            .unwrap();
-
-        vec![response.word]
+        let reader = BufReader::new(langs::FR_TXT);
+        let word = generate_words(reader, 3, 1).unwrap()[0].to_owned();
+        vec![word]
     }
 }
 
